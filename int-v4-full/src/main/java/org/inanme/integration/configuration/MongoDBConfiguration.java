@@ -1,0 +1,29 @@
+package org.inanme.integration.configuration;
+
+import com.mongodb.MongoClient;
+import org.inanme.integration.Channels;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.MongoDbFactory;
+import org.springframework.data.mongodb.core.SimpleMongoDbFactory;
+import org.springframework.expression.common.LiteralExpression;
+import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.integration.mongodb.outbound.MongoDbStoringMessageHandler;
+import org.springframework.messaging.MessageHandler;
+
+@Configuration
+public class MongoDBConfiguration {
+
+    @Bean
+    public MongoDbFactory mongoDbFactory() throws Exception {
+        return new SimpleMongoDbFactory(new MongoClient(), "si4Db");
+    }
+
+    @Bean
+    @ServiceActivator(inputChannel = Channels.STORE_CHANNEL)
+    public MessageHandler mongodbAdapter() throws Exception {
+        MongoDbStoringMessageHandler adapter = new MongoDbStoringMessageHandler(mongoDbFactory());
+        adapter.setCollectionNameExpression(new LiteralExpression("courses"));
+        return adapter;
+    }
+}
