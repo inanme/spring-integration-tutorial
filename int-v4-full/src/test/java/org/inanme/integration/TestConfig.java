@@ -11,7 +11,7 @@ import org.springframework.integration.config.EnableIntegration;
 @ComponentScan("org.inanme")    //@Component
 @IntegrationComponentScan("org.inanme")    //@MessagingGateway
 @EnableIntegration
-@ImportResource("org.inanme/it.xml")
+@ImportResource("classpath:org/inanme/it.xml")
 class TestConfig {
 
 }

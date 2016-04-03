@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/integration"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:beans="http://www.springframework.org/schema/beans"
+             xmlns:context="http://www.springframework.org/schema/context"
+             xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="org.inanme.integration1"/>
+
+    <!--The effect is simple: one thread is responsible for invoking the three services sequentially-->
+
+    <channel id="log"/>
+    <service-activator input-channel="log" ref="monitor"/>
+
+    <gateway service-interface="org.inanme.integration1.IntegrationModule.BookingService"
+             default-request-channel="bookingConfirmationRequests"/>
+
+    <channel id="bookingConfirmationRequests">
+        <interceptors>
+            <wire-tap channel="log"/>
+        </interceptors>
+    </channel>
+    <service-activator input-channel="bookingConfirmationRequests"
+                       output-channel="chargedBookings"
+                       ref="billForBookingService"/>
+    <channel id="chargedBookings"/>
+    <service-activator input-channel="chargedBookings"
+                       output-channel="emailConfirmationRequests"
+                       ref="seatAvailabilityService"/>
+    <channel id="emailConfirmationRequests"/>
+    <outbound-channel-adapter channel="emailConfirmationRequests"
+                              ref="emailConfirmationService" method="m1"/>
+</beans:beans>
