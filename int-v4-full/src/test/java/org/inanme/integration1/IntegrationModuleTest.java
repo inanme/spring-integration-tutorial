@@ -10,15 +10,23 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration("classpath:org/inanme/it.xml")
 public class IntegrationModuleTest {
 
+    private Random random = new Random(System.currentTimeMillis());
+
     @Autowired
     @Qualifier("bookingConfirmationRequests")
     private MessageChannel messageChannel;
+
+    @Autowired
+    @Qualifier("number.stream")
+    private MessageChannel numberStream;
 
     @Autowired
     private BookingService bookingService;
@@ -31,5 +39,24 @@ public class IntegrationModuleTest {
     @Test
     public void testWithGateWay() throws InterruptedException {
         bookingService.book(3);
+    }
+
+    private void sleep() {
+        try {
+            TimeUnit.MILLISECONDS.sleep(random.nextInt(10) * 100l);
+        } catch (InterruptedException e) {
+
+        }
+    }
+
+    @Test
+    public void aggregatorExample() {
+        int max = 10;
+        IntStream.rangeClosed(1, max).forEach(it -> {
+            sleep();
+            numberStream.send(MessageBuilder.withPayload(it).setHeader("CORRELATION_ID", it).build());
+            sleep();
+            numberStream.send(MessageBuilder.withPayload(max - it).setHeader("CORRELATION_ID", max - it).build());
+        });
     }
 }

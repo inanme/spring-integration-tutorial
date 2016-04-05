@@ -12,15 +12,17 @@
 
     <!--The effect is simple: one thread is responsible for invoking the three services sequentially-->
 
-    <channel id="log"/>
-    <service-activator input-channel="log" ref="monitor"/>
+    <channel id="error-channel"/>
+    <channel id="out-channel"/>
+    <outbound-channel-adapter channel="error-channel" ref="error" method="error"/>
+    <outbound-channel-adapter channel="out-channel" ref="out" method="out"/>
 
     <gateway service-interface="org.inanme.integration1.IntegrationModule.BookingService"
              default-request-channel="bookingConfirmationRequests"/>
 
     <channel id="bookingConfirmationRequests">
         <interceptors>
-            <wire-tap channel="log"/>
+            <wire-tap channel="out-channel"/>
         </interceptors>
     </channel>
     <service-activator input-channel="bookingConfirmationRequests"
@@ -33,4 +35,17 @@
     <channel id="emailConfirmationRequests"/>
     <outbound-channel-adapter channel="emailConfirmationRequests"
                               ref="emailConfirmationService" method="m1"/>
+
+    <poller default="true" fixed-delay="1000"/>
+
+    <channel id="number.stream">
+        <queue/>
+    </channel>
+
+    <aggregator id="sumAggregator" input-channel="number.stream"
+                ref="myAggregator" discard-channel="error-channel" output-channel="out-channel"
+                message-store="messageStore" send-partial-result-on-expiry="true"/>
+
+    <beans:bean id="messageStore" class="org.springframework.integration.store.SimpleMessageStore"/>
+
 </beans:beans>
