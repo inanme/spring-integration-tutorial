@@ -3,14 +3,17 @@ package org.inanme.integration1;
 import org.apache.log4j.Logger;
 import org.springframework.integration.annotation.Aggregator;
 import org.springframework.integration.annotation.CorrelationStrategy;
-import org.springframework.integration.annotation.Header;
+import org.springframework.integration.annotation.Payloads;
 import org.springframework.integration.annotation.ReleaseStrategy;
+import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.springframework.integration.IntegrationMessageHeaderAccessor.*;
 
 public class IntegrationModule {
     private static final Logger logger = Logger.getLogger(IntegrationModule.class);
@@ -62,21 +65,29 @@ public class IntegrationModule {
 
         @CorrelationStrategy
         public String correlateBy(
-            @Header("CORRELATION_ID")
+            @Header(CORRELATION_ID)
                 String correlationId) {
             return correlationId;
         }
 
-        @ReleaseStrategy
-        public boolean release(List<Message<Integer>> messages) {
+        public boolean canRelease1(List<Message<Integer>> messages) {
             List<Integer> payload = messages.stream().map(Message::getPayload).collect(Collectors.toList());
             logger.debug("release:" + payload);
             return messages.size() == 2;
         }
 
+        @ReleaseStrategy
+        public boolean canRelease(
+            @Payloads
+                List<Integer> payload) {
+            logger.debug("canRelease:" + payload);
+            return payload.size() == 2;
+        }
+
         @Aggregator
-        public int aggreate(List<Message<Integer>> messages) {
-            List<Integer> payload = messages.stream().map(Message::getPayload).collect(Collectors.toList());
+        public int aggreate(
+            @Payloads
+                List<Integer> payload) {
             logger.debug("aggreate:" + payload);
             return payload.stream().mapToInt(Integer::intValue).sum();
         }

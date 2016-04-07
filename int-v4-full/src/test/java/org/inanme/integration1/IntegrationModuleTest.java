@@ -5,8 +5,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -52,11 +52,11 @@ public class IntegrationModuleTest {
     @Test
     public void aggregatorExample() {
         int max = 10;
-        IntStream.rangeClosed(1, max).forEach(it -> {
+        IntStream.rangeClosed(0, max).forEach(it -> {
             sleep();
-            numberStream.send(MessageBuilder.withPayload(it).setHeader("CORRELATION_ID", it).build());
+            numberStream.send(MessageBuilder.withPayload(it).setCorrelationId(it).build());
             sleep();
-            numberStream.send(MessageBuilder.withPayload(max - it).setHeader("CORRELATION_ID", max - it).build());
+            numberStream.send(MessageBuilder.withPayload(max - it).setCorrelationId(max - it).build());
         });
     }
 }
