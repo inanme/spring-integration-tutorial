@@ -3,38 +3,46 @@
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:beans="http://www.springframework.org/schema/beans"
              xmlns:context="http://www.springframework.org/schema/context"
+             xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+             xmlns:int-http="http://www.springframework.org/schema/integration/http"
+             xmlns:util="http://www.springframework.org/schema/util"
              xsi:schemaLocation="
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+       http://www.springframework.org/schema/integration/http http://www.springframework.org/schema/integration/http/spring-integration-http.xsd
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
-    <context:component-scan base-package="org.inanme.integration1"/>
+    <!--
+    A Channel Adapter connects an application to the messaging system.
+    A Messaging Gateway is a connection that’s specific to bidirectional messaging
+    -->
 
-    <!--The effect is simple: one thread is responsible for invoking the three services sequentially-->
+    <context:annotation-config/>
+    <annotation-config/>
+    <context:component-scan base-package="org.inanme.integration1"/>
 
     <channel id="error-channel"/>
     <channel id="out-channel"/>
-    <outbound-channel-adapter channel="error-channel" ref="error" method="error"/>
-    <outbound-channel-adapter channel="out-channel" ref="out" method="out"/>
-
-    <gateway service-interface="org.inanme.integration1.IntegrationModule.BookingService"
-             default-request-channel="bookingConfirmationRequests"/>
-
+    <channel id="email"/>
+    <channel id="sms"/>
+    <channel id="phone"/>
     <channel id="bookingConfirmationRequests">
         <interceptors>
             <wire-tap channel="out-channel"/>
+            <wire-tap channel="sms"/>
         </interceptors>
     </channel>
-    <service-activator input-channel="bookingConfirmationRequests"
-                       output-channel="chargedBookings"
-                       ref="billForBookingService"/>
     <channel id="chargedBookings"/>
-    <service-activator input-channel="chargedBookings"
-                       output-channel="emailConfirmationRequests"
-                       ref="seatAvailabilityService"/>
-    <channel id="emailConfirmationRequests"/>
-    <outbound-channel-adapter channel="emailConfirmationRequests"
-                              ref="emailConfirmationService" method="m1"/>
+    <recipient-list-router input-channel="seatNotifications">
+        <recipient channel="sms"/>
+        <recipient channel="email"/>
+        <recipient channel="phone"/>
+    </recipient-list-router>
+
+    <gateway service-interface="org.inanme.integration1.IntegrationModule.BookingService"
+             default-request-channel="bookingConfirmationRequests"/>
 
     <poller default="true" fixed-delay="1000"/>
 

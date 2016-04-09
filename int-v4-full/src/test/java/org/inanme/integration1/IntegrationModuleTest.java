@@ -9,13 +9,14 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.support.AnnotationConfigContextLoader;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration("classpath:org/inanme/it.xml")
+@ContextConfiguration(classes = IntegrationModule.class, loader = AnnotationConfigContextLoader.class)
 public class IntegrationModuleTest {
 
     private Random random = new Random(System.currentTimeMillis());
