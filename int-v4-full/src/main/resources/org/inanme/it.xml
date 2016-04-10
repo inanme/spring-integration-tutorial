@@ -23,9 +23,10 @@
     A Messaging Gateway is a connection that’s specific to bidirectional messaging
     -->
 
-    <annotation-config/>
+    <!--<annotation-config/>-->
     <!--<context:annotation-config/>-->
     <!--<context:component-scan base-package="org.inanme.integration1"/>-->
+
     <beans:bean id="connectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory"
                 p:brokerURL="vm://localhost" p:trustAllPackages="true"/>
     <!--<beans:bean id="some-queue" class="org.apache.activemq.command.ActiveMQQueue" c:name="some-queue"/>-->
@@ -51,7 +52,7 @@
 
     <logging-channel-adapter id="logger" log-full-message="true" level="WARN"/>
 
-    <gateway service-interface="org.inanme.integration1.IntegrationModule.BookingService"
+    <gateway service-interface="org.inanme.integration1.IntegrationModule$BookingService"
              default-request-channel="bookingConfirmationRequests"/>
 
     <poller default="true" fixed-delay="1000"/>
@@ -60,7 +61,7 @@
         <queue/>
     </channel>
 
-    <aggregator id="sumAggregator" input-channel="number.stream"
+    <aggregator id="sumAggregator" input-channel="number-stream-1"
                 ref="myAggregator" discard-channel="error-channel" output-channel="out-channel"
                 message-store="messageStore" send-partial-result-on-expiry="true"/>
 
@@ -71,5 +72,12 @@
     </channel>
 
     <resequencer input-channel="number-stream-2" output-channel="logger"/>
+
+    <channel id="add-channel">
+        <queue/>
+    </channel>
+    <channel id="add-reply-channel"/>
+    <gateway service-interface="org.inanme.integration1.IntegrationModule$Add"
+             default-request-channel="add-channel" default-reply-channel="add-reply-channel"/>
 
 </beans:beans>

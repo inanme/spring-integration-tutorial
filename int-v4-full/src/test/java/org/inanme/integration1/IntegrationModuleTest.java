@@ -12,6 +12,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
 
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -39,6 +41,9 @@ public class IntegrationModuleTest {
     @Autowired
     private SomeProducer someProducer;
 
+    @Autowired
+    private Add add;
+
     @Test
     public void testWithChannel() throws InterruptedException {
         messageChannel.send(MessageBuilder.withPayload(2).build());
@@ -59,7 +64,7 @@ public class IntegrationModuleTest {
 
     @Test
     public void aggregator() {
-        int max = 10;
+        int max = 4;
         IntStream.rangeClosed(0, max).forEach(it -> {
             sleep();
             numberStream1.send(MessageBuilder.withPayload(it).setCorrelationId(it).build());
@@ -85,5 +90,11 @@ public class IntegrationModuleTest {
     public synchronized void producerConsumer() throws InterruptedException {
         someProducer.produce();
         wait();
+    }
+
+    @Test
+    public void add() throws ExecutionException, InterruptedException {
+        Future<Integer> add = this.add.add(1);
+        System.out.println(add.get());
     }
 }

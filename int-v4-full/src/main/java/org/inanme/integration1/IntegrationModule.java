@@ -4,10 +4,12 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.integration.annotation.*;
 import org.springframework.integration.channel.*;
+import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -26,10 +29,35 @@ import static org.springframework.integration.IntegrationMessageHeaderAccessor.*
 
 @Configuration
 @ImportResource("classpath:org/inanme/it.xml")
+@EnableIntegration
+@ComponentScan
+@IntegrationComponentScan
 public class IntegrationModule {
+
+    static void sleep() {
+        try {
+            TimeUnit.MILLISECONDS.sleep(1000l);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
     interface BookingService {
         void book(Integer message);
+    }
+
+    interface Add {
+        Future<Integer> add(Integer val1);
+    }
+
+    @Component
+    public static class AddImpl {
+
+        @ServiceActivator(inputChannel = "add-channel")
+        public Integer add(@Payload Integer val1) {
+            sleep();
+            return val1 * 2;
+        }
     }
 
     @Bean(name = "some-channel2")
@@ -78,11 +106,7 @@ public class IntegrationModule {
         @Override
         @ServiceActivator(inputChannel = "some-channel")
         public void accept(@Payload Object item) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(1000l);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            sleep();
             logger.debug(item);
         }
     }
