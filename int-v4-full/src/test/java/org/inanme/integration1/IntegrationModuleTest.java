@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.test.context.ContextConfiguration;
@@ -15,6 +16,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -34,6 +36,10 @@ public class IntegrationModuleTest {
     @Autowired
     @Qualifier("number-stream-2")
     private MessageChannel numberStream2;
+
+    @Autowired
+    @Qualifier("scatter-gather")
+    private Function<Double, Double> scatterGather;
 
     @Autowired
     private BookingService bookingService;
@@ -96,5 +102,11 @@ public class IntegrationModuleTest {
     public void add() throws ExecutionException, InterruptedException {
         Future<Integer> add = this.add.add(1);
         System.out.println(add.get());
+    }
+
+    @Test
+    public void scatterGather(){
+        Double apply = scatterGather.apply(100d);
+        System.out.println(apply);
     }
 }

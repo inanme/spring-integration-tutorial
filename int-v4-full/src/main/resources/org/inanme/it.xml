@@ -9,6 +9,9 @@
              xmlns:int-http="http://www.springframework.org/schema/integration/http"
              xmlns:int-xml="http://www.springframework.org/schema/integration/xml"
              xmlns:util="http://www.springframework.org/schema/util"
+             xmlns:int-scripting="http://www.springframework.org/schema/integration/scripting"
+             xmlns:task="http://www.springframework.org/schema/task"
+             xmlns:stream="http://www.springframework.org/schema/integration/stream"
              xsi:schemaLocation="
        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
        http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
@@ -16,7 +19,10 @@
        http://www.springframework.org/schema/integration/xml http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
-       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/integration/stream http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+       http://www.springframework.org/schema/integration/scripting http://www.springframework.org/schema/integration/scripting/spring-integration-scripting.xsd
+       http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
 
     <!--
     A Channel Adapter connects an application to the messaging system.
@@ -79,5 +85,33 @@
     <channel id="add-reply-channel"/>
     <gateway service-interface="org.inanme.integration1.IntegrationModule$Add"
              default-request-channel="add-channel" default-reply-channel="add-reply-channel"/>
+
+
+    <channel id="scatter-input-channel"/>
+    <scatter-gather input-channel="scatter-input-channel" output-channel="scatter-output-channel"
+                    scatter-channel="scatter-channel" gather-channel="gather-channel"
+                    gather-timeout="3000" requires-reply="false">
+        <gatherer release-strategy-expression="size()==2"/>
+    </scatter-gather>
+    <publish-subscribe-channel id="scatter-channel" apply-sequence="true" task-executor="taskExecutor"/>
+
+    <channel id="gather-channel"/>
+    <!-- Exemplary quotation services  -->
+    <transformer input-channel="scatter-channel" expression="payload * 0.03" output-channel="gather-channel"/>
+    <transformer input-channel="scatter-channel" expression="payload * 0.02" output-channel="gather-channel"/>
+
+    <channel id="scatter-output-channel"/>
+
+    <transformer input-channel="scatter-output-channel">
+        <int-scripting:script lang="groovy">
+            <![CDATA[
+		     payload.min{it}
+   		]]>
+        </int-scripting:script>
+    </transformer>
+
+    <task:executor id="taskExecutor" queue-capacity="2" pool-size="2-2"/>
+    <gateway id="scatter-gather" service-interface="java.util.function.Function"
+             default-request-channel="scatter-input-channel"/>
 
 </beans:beans>
