@@ -6,7 +6,6 @@
     <artifactId>spring-ws-courses</artifactId>
     <packaging>war</packaging>
     <version>0.0.1-SNAPSHOT</version>
-    <name>spring-ws-courses Maven Webapp</name>
 
     <dependencyManagement>
         <dependencies>
@@ -41,6 +40,7 @@
         <dependency>
             <groupId>org.springframework.ws</groupId>
             <artifactId>spring-ws-test</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
@@ -50,20 +50,17 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>18.0</version>
+            <version>19.0</version>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>spring-ws-courses</finalName>
-
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>

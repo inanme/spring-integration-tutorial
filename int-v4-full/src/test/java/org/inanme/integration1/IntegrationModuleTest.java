@@ -1,6 +1,6 @@
 package org.inanme.integration1;
 
-import org.inanme.integration1.IntegrationModule.BookingService;
+import org.inanme.integration1.IntegrationModule.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,11 +26,18 @@ public class IntegrationModuleTest {
     private MessageChannel messageChannel;
 
     @Autowired
-    @Qualifier("number.stream")
-    private MessageChannel numberStream;
+    @Qualifier("number-stream-1")
+    private MessageChannel numberStream1;
+
+    @Autowired
+    @Qualifier("number-stream-2")
+    private MessageChannel numberStream2;
 
     @Autowired
     private BookingService bookingService;
+
+    @Autowired
+    private SomeProducer someProducer;
 
     @Test
     public void testWithChannel() throws InterruptedException {
@@ -51,13 +58,32 @@ public class IntegrationModuleTest {
     }
 
     @Test
-    public void aggregatorExample() {
+    public void aggregator() {
         int max = 10;
         IntStream.rangeClosed(0, max).forEach(it -> {
             sleep();
-            numberStream.send(MessageBuilder.withPayload(it).setCorrelationId(it).build());
+            numberStream1.send(MessageBuilder.withPayload(it).setCorrelationId(it).build());
             sleep();
-            numberStream.send(MessageBuilder.withPayload(max - it).setCorrelationId(max - it).build());
+            numberStream1.send(MessageBuilder.withPayload(max - it).setCorrelationId(max - it).build());
         });
+    }
+
+    @Test
+    public void resequencer() {
+        int max = 10;
+        IntStream.rangeClosed(0, max).forEach(it -> {
+            numberStream2.send(MessageBuilder.withPayload(max - it)
+                    .setCorrelationId("X")
+                    .setSequenceNumber(max - it)
+                    .setSequenceSize(11)
+                    .build());
+            sleep();
+        });
+    }
+
+    @Test
+    public synchronized void producerConsumer() throws InterruptedException {
+        someProducer.produce();
+        wait();
     }
 }

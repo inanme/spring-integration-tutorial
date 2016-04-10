@@ -2,14 +2,18 @@
 <beans:beans xmlns="http://www.springframework.org/schema/integration"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:beans="http://www.springframework.org/schema/beans"
+             xmlns:p="http://www.springframework.org/schema/p"
+             xmlns:c="http://www.springframework.org/schema/c"
              xmlns:context="http://www.springframework.org/schema/context"
              xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
              xmlns:int-http="http://www.springframework.org/schema/integration/http"
+             xmlns:int-xml="http://www.springframework.org/schema/integration/xml"
              xmlns:util="http://www.springframework.org/schema/util"
              xsi:schemaLocation="
        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
        http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
        http://www.springframework.org/schema/integration/http http://www.springframework.org/schema/integration/http/spring-integration-http.xsd
+       http://www.springframework.org/schema/integration/xml http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
@@ -19,10 +23,13 @@
     A Messaging Gateway is a connection that’s specific to bidirectional messaging
     -->
 
-    <context:annotation-config/>
     <annotation-config/>
-    <context:component-scan base-package="org.inanme.integration1"/>
-
+    <!--<context:annotation-config/>-->
+    <!--<context:component-scan base-package="org.inanme.integration1"/>-->
+    <beans:bean id="connectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory"
+                p:brokerURL="vm://localhost" p:trustAllPackages="true"/>
+    <!--<beans:bean id="some-queue" class="org.apache.activemq.command.ActiveMQQueue" c:name="some-queue"/>-->
+    <int-jms:channel id="some-channel" queue-name="some-queue"/>
     <channel id="error-channel"/>
     <channel id="out-channel"/>
     <channel id="email"/>
@@ -32,6 +39,7 @@
         <interceptors>
             <wire-tap channel="out-channel"/>
             <wire-tap channel="sms"/>
+            <wire-tap channel="logger"/>
         </interceptors>
     </channel>
     <channel id="chargedBookings"/>
@@ -41,12 +49,14 @@
         <recipient channel="phone"/>
     </recipient-list-router>
 
+    <logging-channel-adapter id="logger" log-full-message="true" level="WARN"/>
+
     <gateway service-interface="org.inanme.integration1.IntegrationModule.BookingService"
              default-request-channel="bookingConfirmationRequests"/>
 
     <poller default="true" fixed-delay="1000"/>
 
-    <channel id="number.stream">
+    <channel id="number-stream-1">
         <queue/>
     </channel>
 
@@ -55,5 +65,11 @@
                 message-store="messageStore" send-partial-result-on-expiry="true"/>
 
     <beans:bean id="messageStore" class="org.springframework.integration.store.SimpleMessageStore"/>
+
+    <channel id="number-stream-2">
+        <queue/>
+    </channel>
+
+    <resequencer input-channel="number-stream-2" output-channel="logger"/>
 
 </beans:beans>
