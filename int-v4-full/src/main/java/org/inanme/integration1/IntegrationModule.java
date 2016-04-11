@@ -148,8 +148,8 @@ public class IntegrationModule {
         private final Logger logger = Logger.getLogger(getClass());
 
         @ServiceActivator(inputChannel = "email")
-        public void m1(@Payload Integer email) {
-            logger.debug("Email : " + email);
+        public void m1(@Payload Integer payload) {
+            logger.debug("Email : " + payload);
         }
     }
 
@@ -158,8 +158,8 @@ public class IntegrationModule {
         private final Logger logger = Logger.getLogger(getClass());
 
         @ServiceActivator(inputChannel = "sms")
-        public void m1(@Payload Integer email) {
-            logger.debug("SMS : " + email);
+        public void m1(@Payload Integer payload) {
+            logger.debug("SMS : " + payload);
         }
     }
 
@@ -168,8 +168,18 @@ public class IntegrationModule {
         private final Logger logger = Logger.getLogger(getClass());
 
         @ServiceActivator(inputChannel = "phone")
-        public void m1(@Payload Integer email) {
-            logger.debug("Phone : " + email);
+        public void m1(@Payload Integer payload) {
+            logger.debug("Phone : " + payload);
+        }
+    }
+
+    @Component
+    public static class MyWireTab {
+        private final Logger logger = Logger.getLogger(getClass());
+
+        @ServiceActivator(inputChannel = "my-wire-tab")
+        public void m1(@Payload Integer payload) {
+            logger.debug("my-wire-tab : " + payload);
         }
     }
 

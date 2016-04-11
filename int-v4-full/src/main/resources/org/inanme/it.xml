@@ -42,13 +42,14 @@
     <channel id="email"/>
     <channel id="sms"/>
     <channel id="phone"/>
+    <channel id="my-wire-tab"/>
     <channel id="bookingConfirmationRequests">
         <interceptors>
             <wire-tap channel="out-channel"/>
-            <wire-tap channel="sms"/>
             <wire-tap channel="logger"/>
         </interceptors>
     </channel>
+    <wire-tap pattern="bookingConfirmationRequests" channel="my-wire-tab"/>
     <channel id="chargedBookings"/>
     <recipient-list-router input-channel="seatNotifications">
         <recipient channel="sms"/>
