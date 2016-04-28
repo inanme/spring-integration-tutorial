@@ -16,6 +16,8 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -30,9 +32,10 @@ import static org.springframework.integration.IntegrationMessageHeaderAccessor.*
 @Configuration
 @ImportResource("classpath:org/inanme/it.xml")
 @EnableIntegration
+@EnableWebMvc
 @ComponentScan
 @IntegrationComponentScan
-public class IntegrationModule {
+public class IntegrationModule extends WebMvcConfigurerAdapter {
 
     static void sleep() {
         try {
@@ -128,48 +131,38 @@ public class IntegrationModule {
     }
 
     @Component
-    public static class BillForBookingService {
+    public static class ServiceActivators {
+
+        private final Logger logger = Logger.getLogger(getClass());
+
         @ServiceActivator(inputChannel = "bookingConfirmationRequests", outputChannel = "chargedBookings")
-        public Message<Integer> m1(Message<Integer> message) {
+        public Message<Integer> bill(Message<Integer> message) {
             return MessageBuilder.withPayload(message.getPayload() + 1).copyHeaders(message.getHeaders()).build();
         }
-    }
 
-    @Component("seatAvailabilityService")
-    public static class SeatAvailabilityService {
         @ServiceActivator(inputChannel = "chargedBookings", outputChannel = "seatNotifications")
-        public Message<Integer> m1(Message<Integer> message) {
+        public Message<Integer> charge(Message<Integer> message) {
             return MessageBuilder.withPayload(message.getPayload() + 1).copyHeaders(message.getHeaders()).build();
         }
-    }
-
-    @Component
-    public static class EmailConfirmationService {
-        private final Logger logger = Logger.getLogger(getClass());
-
-        @ServiceActivator(inputChannel = "email")
-        public void m1(@Payload Integer payload) {
-            logger.debug("Email : " + payload);
-        }
-    }
-
-    @Component
-    public static class SMSConfirmationService {
-        private final Logger logger = Logger.getLogger(getClass());
 
         @ServiceActivator(inputChannel = "sms")
-        public void m1(@Payload Integer payload) {
+        public void sms(@Payload Integer payload) {
             logger.debug("SMS : " + payload);
         }
-    }
-
-    @Component
-    public static class PhoneConfirmationService {
-        private final Logger logger = Logger.getLogger(getClass());
 
         @ServiceActivator(inputChannel = "phone")
-        public void m1(@Payload Integer payload) {
+        public void phone(@Payload Integer payload) {
             logger.debug("Phone : " + payload);
+        }
+
+        @ServiceActivator(inputChannel = "email")
+        public void email(@Payload Integer payload) {
+            logger.debug("Email : " + payload);
+        }
+
+        @ServiceActivator(inputChannel = "http-inbound-get-1")
+        public String hello() {
+            return "hello";
         }
     }
 
@@ -231,5 +224,3 @@ public class IntegrationModule {
         }
     }
 }
-
-

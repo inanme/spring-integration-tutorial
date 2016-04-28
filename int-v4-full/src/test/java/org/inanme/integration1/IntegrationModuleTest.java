@@ -1,16 +1,23 @@
 package org.inanme.integration1;
 
-import org.inanme.integration1.IntegrationModule.*;
+import org.inanme.integration1.IntegrationModule.Add;
+import org.inanme.integration1.IntegrationModule.BookingService;
+import org.inanme.integration1.IntegrationModule.SomeProducer;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.AnnotationConfigContextLoader;
+import org.springframework.test.context.web.AnnotationConfigWebContextLoader;
+import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -19,8 +26,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = IntegrationModule.class, loader = AnnotationConfigContextLoader.class)
+@ContextConfiguration(classes = IntegrationModule.class, loader = AnnotationConfigWebContextLoader.class)
+@WebAppConfiguration
 public class IntegrationModuleTest {
 
     private Random random = new Random(System.currentTimeMillis());
@@ -108,5 +118,22 @@ public class IntegrationModuleTest {
     public void scatterGather(){
         Double apply = scatterGather.apply(100d);
         System.out.println(apply);
+    }
+
+    private MockMvc mockMvc;
+
+    @Autowired
+    private WebApplicationContext wac;
+
+    @Before
+    public void setup() throws Exception {
+        mockMvc = MockMvcBuilders.webAppContextSetup(this.wac).build();
+    }
+
+    @Test
+    public void shouldReceiveMessage() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/service").
+            header("param", "1")).
+            andExpect(status().isOk()).andExpect(content().string("hello"));
     }
 }

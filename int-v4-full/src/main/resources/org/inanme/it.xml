@@ -115,4 +115,7 @@
     <gateway id="scatter-gather" service-interface="java.util.function.Function"
              default-request-channel="scatter-input-channel"/>
 
+    <channel id="http-inbound-get-1"/>
+    <int-http:inbound-gateway request-channel="http-inbound-get-1" path="/service" supported-methods="GET"/>
+
 </beans:beans>
