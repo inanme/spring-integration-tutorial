@@ -103,13 +103,7 @@
 
     <channel id="scatter-output-channel"/>
 
-    <transformer input-channel="scatter-output-channel">
-        <int-scripting:script lang="groovy">
-            <![CDATA[
-		     payload.min{it}
-   		]]>
-        </int-scripting:script>
-    </transformer>
+    <transformer input-channel="scatter-output-channel" expression="T(java.util.Collections).max(payload)"/>
 
     <task:executor id="taskExecutor" queue-capacity="2" pool-size="2-2"/>
     <gateway id="scatter-gather" service-interface="java.util.function.Function"

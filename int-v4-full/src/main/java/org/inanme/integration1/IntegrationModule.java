@@ -32,10 +32,9 @@ import static org.springframework.integration.IntegrationMessageHeaderAccessor.*
 @Configuration
 @ImportResource("classpath:org/inanme/it.xml")
 @EnableIntegration
-@EnableWebMvc
 @ComponentScan
 @IntegrationComponentScan
-public class IntegrationModule extends WebMvcConfigurerAdapter {
+public class IntegrationModule {
 
     static void sleep() {
         try {

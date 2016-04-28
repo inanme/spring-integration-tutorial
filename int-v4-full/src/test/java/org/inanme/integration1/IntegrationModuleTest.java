@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -117,7 +119,7 @@ public class IntegrationModuleTest {
     @Test
     public void scatterGather(){
         Double apply = scatterGather.apply(100d);
-        System.out.println(apply);
+        assertThat(apply, is(3d));
     }
 
     private MockMvc mockMvc;
