@@ -29,29 +29,25 @@
     A Messaging Gateway is a connection that’s specific to bidirectional messaging
     -->
 
-    <!--<annotation-config/>-->
-    <!--<context:annotation-config/>-->
-    <!--<context:component-scan base-package="org.inanme.integration1"/>-->
-
     <beans:bean id="connectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory"
                 p:brokerURL="vm://localhost" p:trustAllPackages="true"/>
     <!--<beans:bean id="some-queue" class="org.apache.activemq.command.ActiveMQQueue" c:name="some-queue"/>-->
-    <int-jms:channel id="some-channel" queue-name="some-queue"/>
+    <int-jms:channel id="produce-consume-jms-channel" queue-name="produce-consume-jms-channel"/>
     <channel id="error-channel"/>
     <channel id="out-channel"/>
     <channel id="email"/>
     <channel id="sms"/>
     <channel id="phone"/>
     <channel id="my-wire-tab"/>
-    <channel id="bookingConfirmationRequests">
+    <channel id="booking">
         <interceptors>
             <wire-tap channel="out-channel"/>
             <wire-tap channel="logger"/>
         </interceptors>
     </channel>
-    <wire-tap pattern="bookingConfirmationRequests" channel="my-wire-tab"/>
-    <channel id="chargedBookings"/>
-    <recipient-list-router input-channel="seatNotifications">
+    <wire-tap pattern="booking" channel="my-wire-tab"/>
+    <channel id="charging"/>
+    <recipient-list-router input-channel="notification">
         <recipient channel="sms"/>
         <recipient channel="email"/>
         <recipient channel="phone"/>
@@ -59,34 +55,25 @@
 
     <logging-channel-adapter id="logger" log-full-message="true" level="WARN"/>
 
-    <gateway service-interface="org.inanme.integration1.IntegrationModule$BookingService"
-             default-request-channel="bookingConfirmationRequests"/>
-
     <poller default="true" fixed-delay="1000"/>
 
-    <channel id="number-stream-1">
+    <channel id="aggregator-stream">
         <queue/>
     </channel>
-
-    <aggregator id="sumAggregator" input-channel="number-stream-1"
+    <beans:bean id="messageStore" class="org.springframework.integration.store.SimpleMessageStore"/>
+    <aggregator id="sumAggregator" input-channel="aggregator-stream"
                 ref="myAggregator" discard-channel="error-channel" output-channel="out-channel"
                 message-store="messageStore" send-partial-result-on-expiry="true"/>
 
-    <beans:bean id="messageStore" class="org.springframework.integration.store.SimpleMessageStore"/>
-
-    <channel id="number-stream-2">
+    <channel id="resequencer-stream">
         <queue/>
     </channel>
-
-    <resequencer input-channel="number-stream-2" output-channel="logger"/>
+    <resequencer input-channel="resequencer-stream" output-channel="logger"/>
 
     <channel id="add-channel">
         <queue/>
     </channel>
     <channel id="add-reply-channel"/>
-    <gateway service-interface="org.inanme.integration1.IntegrationModule$Add"
-             default-request-channel="add-channel" default-reply-channel="add-reply-channel"/>
-
 
     <channel id="scatter-input-channel"/>
     <scatter-gather input-channel="scatter-input-channel" output-channel="scatter-output-channel"

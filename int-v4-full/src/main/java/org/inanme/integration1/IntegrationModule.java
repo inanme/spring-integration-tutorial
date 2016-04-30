@@ -20,11 +20,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.inanme.integration1.IntegrationModuleSupport.sleep;
 import static org.springframework.integration.IntegrationMessageHeaderAccessor.*;
 
 @Configuration
@@ -34,30 +32,10 @@ import static org.springframework.integration.IntegrationMessageHeaderAccessor.*
 @IntegrationComponentScan
 public class IntegrationModule {
 
-    static void sleep() {
-        try {
-            TimeUnit.MILLISECONDS.sleep(1000l);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    interface BookingService {
-        void book(Integer message);
-    }
-
+    @MessagingGateway
     interface Add {
+        @Gateway(requestChannel = "add-channel", replyChannel = "add-reply-channel")
         Future<Integer> add(Integer val1);
-    }
-
-    @Component
-    public static class AddImpl {
-
-        @ServiceActivator(inputChannel = "add-channel")
-        public Integer add(@Payload Integer val1) {
-            sleep();
-            return val1 * 2;
-        }
     }
 
     @Bean(name = "some-channel2")
@@ -84,47 +62,44 @@ public class IntegrationModule {
     }
 
     @Component
-    public static class SomeProducer {
+    public static class ProducerConsumer {
         private final Logger logger = Logger.getLogger(getClass());
+        private static final String CHANNEL = "produce-consume-jms-channel";
 
         @Autowired
-        @Qualifier("some-channel")
+        @Qualifier(CHANNEL)
         private MessageChannel channel;
 
         public void produce() {
-            IntStream.range(0, 5).boxed().forEach(item -> {
-                logger.debug(item);
+            IntStream.range(0, 10).boxed().forEach(item -> {
                 channel.send(MessageBuilder.withPayload(item).build());
+                logger.debug("Produced " + item);
             });
         }
-    }
 
-    @Component
-    public static class SomeConsumer1 implements Consumer {
-        private final Logger logger = Logger.getLogger(getClass());
-
-        @Override
-        @ServiceActivator(inputChannel = "some-channel")
-        public void accept(@Payload Object item) {
+        @ServiceActivator(inputChannel = CHANNEL)
+        public void consume1(@Payload Object item) {
             sleep();
-            logger.debug(item);
+            logger.debug("consumer1 : " + item);
+        }
+
+        @ServiceActivator(inputChannel = CHANNEL)
+        public void consume2(@Payload Object item) {
+            sleep();
+            logger.debug("consumer2 : " + item);
+        }
+
+        @ServiceActivator(inputChannel = CHANNEL)
+        public void consume3(@Payload Object item) {
+            sleep();
+            logger.debug("consumer3 : " + item);
         }
     }
 
-    @Component
-    public static class SomeConsumer2 implements Consumer {
-        private final Logger logger = Logger.getLogger(getClass());
-
-        @Override
-        @ServiceActivator(inputChannel = "some-channel")
-        public void accept(@Payload Object item) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(1000l);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            logger.debug(item);
-        }
+    @MessagingGateway
+    interface BookingService {
+        @Gateway(requestChannel = "booking")
+        void book(Integer message);
     }
 
     @Component
@@ -132,12 +107,12 @@ public class IntegrationModule {
 
         private final Logger logger = Logger.getLogger(getClass());
 
-        @ServiceActivator(inputChannel = "bookingConfirmationRequests", outputChannel = "chargedBookings")
+        @ServiceActivator(inputChannel = "booking", outputChannel = "charging")
         public Message<Integer> bill(Message<Integer> message) {
             return MessageBuilder.withPayload(message.getPayload() + 1).copyHeaders(message.getHeaders()).build();
         }
 
-        @ServiceActivator(inputChannel = "chargedBookings", outputChannel = "seatNotifications")
+        @ServiceActivator(inputChannel = "charging", outputChannel = "notification")
         public Message<Integer> charge(Message<Integer> message) {
             return MessageBuilder.withPayload(message.getPayload() + 1).copyHeaders(message.getHeaders()).build();
         }
@@ -160,6 +135,12 @@ public class IntegrationModule {
         @ServiceActivator(inputChannel = "http-inbound-get-1")
         public String hello() {
             return "hello";
+        }
+
+        @ServiceActivator(inputChannel = "add-channel")
+        public Integer add(@Payload Integer val1) {
+            sleep();
+            return val1 + 2;
         }
     }
 
@@ -200,12 +181,6 @@ public class IntegrationModule {
         @CorrelationStrategy
         public String correlateBy(@Header(CORRELATION_ID) String correlationId) {
             return correlationId;
-        }
-
-        public boolean canRelease1(List<Message<Integer>> messages) {
-            List<Integer> payload = messages.stream().map(Message::getPayload).collect(Collectors.toList());
-            logger.debug("release:" + payload);
-            return messages.size() == 2;
         }
 
         @ReleaseStrategy

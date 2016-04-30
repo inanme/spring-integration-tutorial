@@ -1,8 +1,6 @@
 package org.inanme.integration1;
 
-import org.inanme.integration1.IntegrationModule.Add;
-import org.inanme.integration1.IntegrationModule.BookingService;
-import org.inanme.integration1.IntegrationModule.SomeProducer;
+import org.inanme.integration1.IntegrationModule.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,14 +17,14 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.inanme.integration1.IntegrationModuleSupport.randomSleep;
+import static org.inanme.integration1.IntegrationModuleSupport.sleep;
 import static org.junit.Assert.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -35,93 +33,91 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebAppConfiguration
 public class IntegrationModuleTest {
 
-    private Random random = new Random(System.currentTimeMillis());
-
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
     @Autowired
-    @Qualifier("bookingConfirmationRequests")
+    @Qualifier("booking")
     private MessageChannel messageChannel;
-
-    @Autowired
-    @Qualifier("number-stream-1")
-    private MessageChannel numberStream1;
-
-    @Autowired
-    @Qualifier("number-stream-2")
-    private MessageChannel numberStream2;
-
-    @Autowired
-    @Qualifier("scatter-gather")
-    private Function<Double, Double> scatterGather;
-
-    @Autowired
-    private BookingService bookingService;
-
-    @Autowired
-    private SomeProducer someProducer;
-
-    @Autowired
-    private Add add;
 
     @Test
     public void testWithChannel() throws InterruptedException {
         messageChannel.send(MessageBuilder.withPayload(2).build());
     }
 
+    @Autowired
+    private BookingService bookingService;
+
     @Test
     public void testWithGateWay() throws InterruptedException {
         bookingService.book(3);
     }
 
-    private void sleep() {
-        try {
-            TimeUnit.MILLISECONDS.sleep(random.nextInt(10) * 100l);
-        } catch (InterruptedException e) {
-
-        }
-    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    @Qualifier("aggregator-stream")
+    private MessageChannel aggregatorStream;
 
     @Test
     public void aggregator() {
         int max = 4;
         IntStream.rangeClosed(0, max).forEach(it -> {
-            sleep();
-            numberStream1.send(MessageBuilder.withPayload(it).setCorrelationId(it).build());
-            sleep();
-            numberStream1.send(MessageBuilder.withPayload(max - it).setCorrelationId(max - it).build());
+            randomSleep();
+            aggregatorStream.send(MessageBuilder.withPayload(it).setCorrelationId(it).build());
+            randomSleep();
+            aggregatorStream.send(MessageBuilder.withPayload(max - it).setCorrelationId(max - it).build());
         });
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    @Qualifier("resequencer-stream")
+    private MessageChannel resequencerStream;
 
     @Test
     public void resequencer() {
         int max = 10;
         IntStream.rangeClosed(0, max).forEach(it -> {
-            numberStream2.send(MessageBuilder.withPayload(max - it)
+            resequencerStream.send(MessageBuilder.withPayload(max - it)
                     .setCorrelationId("X")
                     .setSequenceNumber(max - it)
                     .setSequenceSize(11)
                     .build());
-            sleep();
+            randomSleep();
         });
+        sleep();
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    private ProducerConsumer producerConsumer;
 
     @Test
     public synchronized void producerConsumer() throws InterruptedException {
-        someProducer.produce();
+        producerConsumer.produce();
         wait();
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    private Add add;
 
     @Test
     public void add() throws ExecutionException, InterruptedException {
         Future<Integer> add = this.add.add(1);
-        System.out.println(add.get());
+        assertThat(add.get(), is(3));
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    @Qualifier("scatter-gather")
+    private Function<Double, Double> scatterGather;
+
     @Test
-    public void scatterGather(){
+    public void scatterGather() {
         Double apply = scatterGather.apply(100d);
         assertThat(apply, is(3d));
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
     private MockMvc mockMvc;
 
     @Autowired
@@ -135,7 +131,8 @@ public class IntegrationModuleTest {
     @Test
     public void shouldReceiveMessage() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/service").
-            header("param", "1")).
-            andExpect(status().isOk()).andExpect(content().string("hello"));
+                header("param", "1")).
+                andExpect(status().isOk()).andExpect(content().string("hello"));
     }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
 }
