@@ -11,6 +11,7 @@
              xmlns:util="http://www.springframework.org/schema/util"
              xmlns:int-scripting="http://www.springframework.org/schema/integration/scripting"
              xmlns:task="http://www.springframework.org/schema/task"
+             xmlns:jdbc="http://www.springframework.org/schema/jdbc"
              xmlns:stream="http://www.springframework.org/schema/integration/stream"
              xsi:schemaLocation="
        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
@@ -18,6 +19,7 @@
        http://www.springframework.org/schema/integration/http http://www.springframework.org/schema/integration/http/spring-integration-http.xsd
        http://www.springframework.org/schema/integration/xml http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
        http://www.springframework.org/schema/integration/stream http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
@@ -28,7 +30,9 @@
     A Channel Adapter connects an application to the messaging system.
     A Messaging Gateway is a connection that’s specific to bidirectional messaging
     -->
-
+    <jdbc:embedded-database id="dataSource" type="H2">
+        <jdbc:script location="classpath:/org/springframework/integration/jdbc/schema-h2.sql"/>
+    </jdbc:embedded-database>
     <beans:bean id="connectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory"
                 p:brokerURL="vm://localhost" p:trustAllPackages="true"/>
     <!--<beans:bean id="some-queue" class="org.apache.activemq.command.ActiveMQQueue" c:name="some-queue"/>-->
@@ -61,9 +65,11 @@
         <queue/>
     </channel>
     <beans:bean id="messageStore" class="org.springframework.integration.store.SimpleMessageStore"/>
+    <beans:bean id="messageStore1" class="org.springframework.integration.jdbc.JdbcMessageStore"
+                p:dataSource-ref="dataSource"/>
     <aggregator id="sumAggregator" input-channel="aggregator-stream"
                 ref="myAggregator" discard-channel="error-channel" output-channel="out-channel"
-                message-store="messageStore" send-partial-result-on-expiry="true"/>
+                message-store="messageStore1" send-partial-result-on-expiry="true"/>
 
     <channel id="resequencer-stream">
         <queue/>
@@ -73,30 +79,45 @@
     <channel id="add-channel">
         <queue/>
     </channel>
-    <channel id="add-reply-channel"/>
 
-    <channel id="scatter-input-channel"/>
+    <channel id="buffered-channel-with-queue-size-1">
+        <rendezvous-queue/>
+    </channel>
+
+    <gateway id="scatter-gather" service-interface="java.util.function.Function"
+             default-request-channel="scatter-input-channel"/>
     <scatter-gather input-channel="scatter-input-channel" output-channel="scatter-output-channel"
                     scatter-channel="scatter-channel" gather-channel="gather-channel"
                     gather-timeout="3000" requires-reply="false">
         <gatherer release-strategy-expression="size()==2"/>
     </scatter-gather>
+    <task:executor id="taskExecutor" queue-capacity="2" pool-size="2-2"/>
     <publish-subscribe-channel id="scatter-channel" apply-sequence="true" task-executor="taskExecutor"/>
 
     <channel id="gather-channel"/>
     <!-- Exemplary quotation services  -->
+    <transformer input-channel="scatter-channel" expression="payload * 0.04" output-channel="gather-channel"/>
     <transformer input-channel="scatter-channel" expression="payload * 0.03" output-channel="gather-channel"/>
     <transformer input-channel="scatter-channel" expression="payload * 0.02" output-channel="gather-channel"/>
-
-    <channel id="scatter-output-channel"/>
-
     <transformer input-channel="scatter-output-channel" expression="T(java.util.Collections).max(payload)"/>
-
-    <task:executor id="taskExecutor" queue-capacity="2" pool-size="2-2"/>
-    <gateway id="scatter-gather" service-interface="java.util.function.Function"
-             default-request-channel="scatter-input-channel"/>
 
     <channel id="http-inbound-get-1"/>
     <int-http:inbound-gateway request-channel="http-inbound-get-1" path="/service" supported-methods="GET"/>
+
+    <chain input-channel="my-chain">
+        <filter expression="T(Math).floorMod(payload.intValue(),2) == 0"
+                throw-exception-on-rejection="true"/>
+        <transformer expression="@'integrationModule.ServiceActivators'.add(payload)"/>
+        <transformer expression="@'integrationModule.ServiceActivators'.add(payload)"/>
+        <transformer expression="new org.inanme.integration1.IntegrationModule.Data(payload)"/>
+        <object-to-json-transformer object-mapper="mapper"/>
+        <json-to-object-transformer object-mapper="mapper"/>
+        <int-xml:marshalling-transformer marshaller="jaxb2Marshaller" result-type="StringResult"
+                                         result-transformer="resultTransformer"/>
+    </chain>
+
+    <beans:bean id="resultTransformer"
+                class="org.springframework.integration.xml.transformer.ResultToStringTransformer"/>
+
 
 </beans:beans>

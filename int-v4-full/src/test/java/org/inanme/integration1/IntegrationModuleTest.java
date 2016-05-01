@@ -1,13 +1,17 @@
 package org.inanme.integration1;
 
+import org.apache.log4j.Logger;
 import org.inanme.integration1.IntegrationModule.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.integration.MessageRejectedException;
 import org.springframework.integration.support.MessageBuilder;
+import org.springframework.integration.support.json.JsonObjectMapper;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.AnnotationConfigWebContextLoader;
@@ -17,6 +21,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import javax.xml.transform.stream.StreamResult;
+import java.io.StringWriter;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Function;
@@ -32,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(classes = IntegrationModule.class, loader = AnnotationConfigWebContextLoader.class)
 @WebAppConfiguration
 public class IntegrationModuleTest {
+    private final Logger logger = Logger.getLogger(getClass());
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     @Autowired
@@ -49,6 +56,26 @@ public class IntegrationModuleTest {
     @Test
     public void testWithGateWay() throws InterruptedException {
         bookingService.book(3);
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    @Qualifier("buffered-channel-with-queue-size-1")
+    private MessageChannel bufferedChannelWithQueueSize1;
+
+    @Test
+    public void testBufferedChannelWithQueueSize1() throws InterruptedException {
+        boolean message1 = bufferedChannelWithQueueSize1.send(MessageBuilder.withPayload("message1").build());
+        assertThat(message1, is(true));
+        logger.debug("sent message1");
+        boolean message2 = bufferedChannelWithQueueSize1.send(MessageBuilder.withPayload("message1").build());
+        assertThat(message2, is(true));
+        logger.debug("sent message2");
+        boolean message3 = bufferedChannelWithQueueSize1.send(MessageBuilder.withPayload("message3").build(), 500l);
+        sleep();//wait until message2 gets progressed
+        sleep();//wait until message2 gets progressed
+        assertThat(message3, is(false));
+        logger.debug("sent message3");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,7 +141,29 @@ public class IntegrationModuleTest {
     @Test
     public void scatterGather() {
         Double apply = scatterGather.apply(100d);
-        assertThat(apply, is(3d));
+        assertThat(apply, is(4d));
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    private MyChain myChain;
+
+    @Autowired
+    private JsonObjectMapper jsonObjectMapper;
+
+    @Autowired
+    private Jaxb2Marshaller jaxb2Marshaller;
+
+    @Test
+    public void myChainTest() throws Exception {
+        StringWriter out = new StringWriter();
+        jaxb2Marshaller.marshal(new Data(6), new StreamResult(out));
+        assertThat(myChain.call(2), is(out.toString()));
+    }
+
+    @Test(expected = MessageRejectedException.class)
+    public void myChainTestFiltered() throws Exception {
+        assertThat(myChain.call(1), is(2));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////

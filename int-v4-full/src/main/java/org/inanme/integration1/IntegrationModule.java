@@ -1,5 +1,7 @@
 package org.inanme.integration1;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -11,12 +13,15 @@ import org.springframework.integration.annotation.*;
 import org.springframework.integration.channel.*;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.support.MessageBuilder;
+import org.springframework.integration.support.json.Jackson2JsonObjectMapper;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.stereotype.Component;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -32,10 +37,36 @@ import static org.springframework.integration.IntegrationMessageHeaderAccessor.*
 @IntegrationComponentScan
 public class IntegrationModule {
 
+    @Bean
+    public Jackson2JsonObjectMapper mapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
+        return new Jackson2JsonObjectMapper(mapper);
+    }
+
+    @Bean
+    public Jaxb2Marshaller jaxb2Marshaller() {
+        Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
+        marshaller.setClassesToBeBound(Data.class);
+        return marshaller;
+    }
+
     @MessagingGateway
     interface Add {
-        @Gateway(requestChannel = "add-channel", replyChannel = "add-reply-channel")
+        @Gateway(requestChannel = "add-channel")
         Future<Integer> add(Integer val1);
+    }
+
+    @MessagingGateway
+    interface BookingService {
+        @Gateway(requestChannel = "booking")
+        void book(Integer message);
+    }
+
+    @MessagingGateway
+    interface MyChain {
+        @Gateway(requestChannel = "my-chain")
+        String call(Integer val1);
     }
 
     @Bean(name = "some-channel2")
@@ -96,15 +127,28 @@ public class IntegrationModule {
         }
     }
 
-    @MessagingGateway
-    interface BookingService {
-        @Gateway(requestChannel = "booking")
-        void book(Integer message);
+    @XmlRootElement
+    public static class Data {
+        Integer integer;
+
+        public Data(Integer integer) {
+            this.integer = integer;
+        }
+
+        public Data() {
+        }
+
+        public Integer getInteger() {
+            return integer;
+        }
+
+        public void setInteger(Integer integer) {
+            this.integer = integer;
+        }
     }
 
     @Component
     public static class ServiceActivators {
-
         private final Logger logger = Logger.getLogger(getClass());
 
         @ServiceActivator(inputChannel = "booking", outputChannel = "charging")
@@ -141,6 +185,12 @@ public class IntegrationModule {
         public Integer add(@Payload Integer val1) {
             sleep();
             return val1 + 2;
+        }
+
+        @ServiceActivator(inputChannel = "buffered-channel-with-queue-size-1")
+        public void queueConsumer(@Payload String message) {
+            sleep();
+            logger.debug("queueConsumer : " + message);
         }
     }
 
