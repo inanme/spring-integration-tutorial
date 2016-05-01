@@ -120,4 +120,19 @@
                 class="org.springframework.integration.xml.transformer.ResultToStringTransformer"/>
 
 
+    <gateway id="claim" service-interface="java.util.function.Function"
+             default-request-channel="claim-test"/>
+    <chain input-channel="claim-test">
+        <enricher>
+            <header name="name" expression="payload.name"/>
+        </enricher>
+        <enricher request-channel="claim-in">
+            <header name="claimCheck" expression="payload"/>
+        </enricher>
+        <transformer expression="headers.claimCheck"/>
+        <claim-check-out message-store="messageStore1"/>
+        <transformer expression="headers.name+' and '+payload.surname"/>
+    </chain>
+    <claim-check-in input-channel="claim-in" message-store="messageStore1"/>
+
 </beans:beans>

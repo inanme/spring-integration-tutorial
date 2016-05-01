@@ -1,5 +1,6 @@
 package org.inanme.integration1;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.log4j.Logger;
 import org.inanme.integration1.IntegrationModule.*;
 import org.junit.Before;
@@ -23,6 +24,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Function;
@@ -142,6 +144,17 @@ public class IntegrationModuleTest {
     public void scatterGather() {
         Double apply = scatterGather.apply(100d);
         assertThat(apply, is(4d));
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
+    @Qualifier("claim")
+    private Function<Map<String, String>, String> claim;
+
+    @Test
+    public void claim() {
+        Map<String, String> of = ImmutableMap.of("name", "x", "surname", "y");
+        assertThat(claim.apply(of), is("x and y"));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
