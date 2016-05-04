@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.integration.annotation.*;
 import org.springframework.integration.channel.*;
 import org.springframework.integration.config.EnableIntegration;
@@ -27,7 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
-import static org.inanme.integration1.IntegrationModuleSupport.sleep;
+import static org.inanme.integration1.IntegrationModuleSupport.*;
 import static org.springframework.integration.IntegrationMessageHeaderAccessor.*;
 
 @Configuration
@@ -51,10 +53,23 @@ public class IntegrationModule {
         return marshaller;
     }
 
+    @Bean
+    public AsyncTaskExecutor exec() {
+        SimpleAsyncTaskExecutor simpleAsyncTaskExecutor = new SimpleAsyncTaskExecutor();
+        simpleAsyncTaskExecutor.setThreadNamePrefix("exec-");
+        return simpleAsyncTaskExecutor;
+    }
+
     @MessagingGateway
     interface Add {
         @Gateway(requestChannel = "add-channel")
         Future<Integer> add(Integer val1);
+    }
+
+    @MessagingGateway(asyncExecutor = "exec")
+    interface Save {
+        @Gateway(requestChannel = "save-channel")
+        Future<Void> save(Integer val1);
     }
 
     @MessagingGateway
@@ -191,6 +206,12 @@ public class IntegrationModule {
         public void queueConsumer(@Payload String message) {
             sleep();
             logger.debug("queueConsumer : " + message);
+        }
+
+        @ServiceActivator(inputChannel = "save-channel-impl")
+        public void save(@Payload Integer payload) {
+            sleep();
+            logger.debug("save : " + payload);
         }
     }
 

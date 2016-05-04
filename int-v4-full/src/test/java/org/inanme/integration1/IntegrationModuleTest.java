@@ -148,6 +148,16 @@ public class IntegrationModuleTest {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     @Autowired
+    private Save save;
+
+    @Test
+    public void testSaveVoidReturn() {
+        save.save(10);
+        logger.debug("save called");
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Autowired
     @Qualifier("claim")
     private Function<Map<String, String>, String> claim;
 

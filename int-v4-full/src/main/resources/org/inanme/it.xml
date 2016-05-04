@@ -59,6 +59,8 @@
 
     <logging-channel-adapter id="logger" log-full-message="true" level="WARN"/>
 
+    <bridge input-channel="save-channel" output-channel="save-channel-impl"/>
+
     <poller default="true" fixed-delay="1000"/>
 
     <channel id="aggregator-stream">
